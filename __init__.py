@@ -22,7 +22,8 @@ from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from huawei_solar import HuaweiSolarBridge, HuaweiSolarException, InvalidCredentials
+from .bridge import HuaweiSolarBridge
+from huawei_solar import HuaweiSolarException, InvalidCredentials
 from huawei_solar import register_values as rv
 
 from .const import (
