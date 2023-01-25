@@ -13,7 +13,7 @@ from huawei_solar.files import (
     OptimizerSystemInformation,
     OptimizerSystemInformationDataFile,
 )
-from huawei_solar.huawei_solar import AsyncHuaweiSolar, Result
+from huawei_solar.huawei_solar import DEFAULT_BAUDRATE, DEFAULT_SLAVE, DEFAULT_TCP_PORT, AsyncHuaweiSolar, Result
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,11 +52,6 @@ class HuaweiSolarBridge:
 
         self._pv_registers = None
 
-        # When optimizers go offline, they stop being reported in the realtime data file,
-        # we therefore keep the latest status in memory so that we can report their latest
-        # values instead of nothing
-        self._last_optimizer_data: dict[int, OptimizerRealTimeData] = {}
-
         self.__heartbeat_enabled = False
         self.__heartbeat_task: t.Optional[asyncio.Task] = None
 
@@ -64,7 +59,7 @@ class HuaweiSolarBridge:
         self.__password: t.Optional[str] = None
 
     @classmethod
-    async def create(cls, host: str, port: int = 502, slave_id: int = 0):
+    async def create(cls, host: str, port: int = DEFAULT_TCP_PORT, slave_id: int = DEFAULT_SLAVE):
         """Creates a HuaweiSolarBridge instance for the inverter hosting the modbus interface."""
         client = await AsyncHuaweiSolar.create(host, port, slave_id)
         update_lock = asyncio.Lock()
@@ -77,10 +72,11 @@ class HuaweiSolarBridge:
     async def create_rtu(
         cls,
         port: str,
-        slave_id: int = 0,
+        baudrate: int = DEFAULT_BAUDRATE,
+        slave_id: int = DEFAULT_SLAVE,
     ):
         """Creates a HuaweiSolarBridge instance for the inverter hosting the modbus interface."""
-        client = await AsyncHuaweiSolar.create_rtu(port, slave_id)
+        client = await AsyncHuaweiSolar.create_rtu(port, baudrate, slave_id)
         update_lock = asyncio.Lock()
         bridge = cls(client, update_lock, primary=True)
         await HuaweiSolarBridge.__populate_fields(bridge)
@@ -235,18 +231,14 @@ class HuaweiSolarBridge:
         )
         real_time_data = OptimizerRealTimeDataFile(file_data)
 
-        if len(real_time_data.data_units) > 0:
+        if len(real_time_data.data_units) == 0:
+            return {}
 
-            # we only expect one element, but if more would be present,
-            # then only the latest one is of interest (list is sorted time descending)
-            latest_unit = real_time_data.data_units[0]
+        # we only expect one element, but if more would be present,
+        # then only the latest one is of interest (list is sorted time descending)
+        latest_unit = real_time_data.data_units[0]
 
-            # Update self._last_optimizer_data with latest values that were retrieved.
-            # It is possible that only a few optimizers are reporting, when others are
-            # already offline. That is why we expicitely update instead of replace the dict
-            self._last_optimizer_data.update({opt.optimizer_address: opt for opt in latest_unit.optimizers})
-
-        return self._last_optimizer_data
+        return {opt.optimizer_address: opt for opt in latest_unit.optimizers}
 
     async def get_optimizer_system_information_data(
         self,
