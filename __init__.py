@@ -306,7 +306,7 @@ class HuaweiSolarUpdateCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         try:
-            async with async_timeout.timeout(20):
+            async with async_timeout.timeout(5):
                 return await self.bridge.update()
         except HuaweiSolarException as err:
             raise UpdateFailed(
@@ -364,7 +364,7 @@ class HuaweiSolarOptimizerUpdateCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         """Retrieve the latest values from the optimizers."""
         try:
-            async with async_timeout.timeout(20):
+            async with async_timeout.timeout(5):
                 return await self.bridge.get_latest_optimizer_history_data()
         except HuaweiSolarException as err:
             raise UpdateFailed(
@@ -421,7 +421,7 @@ class HuaweiSolarConfigurationUpdateCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         try:
-            async with async_timeout.timeout(20):
+            async with async_timeout.timeout(5):
                 return await self.bridge.update_configuration_registers()
         except HuaweiSolarException as err:
             raise UpdateFailed(
